@@ -1,0 +1,118 @@
+---
+- name: Setup cloud server
+  hosts: cloud
+  remote_user: root
+  environment:
+    PATH: "/nix/var/nix/profiles/default/bin:{{ ansible_env.PATH }}"
+  vars_files:
+      - secrets.yml
+
+  tasks:
+  - name: Create wheel group
+    group:
+      name: wheel
+      state: present
+
+  - name: Create user
+    ansible.builtin.user:
+      name: marco
+      password: "{{ marco_pass }}"
+      shell: /bin/bash
+      groups: wheel
+      create_home: yes
+
+  - name: Check if nix is installed
+    ansible.builtin.shell: nix-build --version
+    become_user: marco
+    args:
+      executable: /bin/bash
+    register: nix_check
+    ignore_errors: true
+
+  - name: Install baseline packages
+    ansible.builtin.apt:
+      name: xz-utils
+      update_cache: yes
+    become_user: marco
+
+  - name: Download nix install file
+    ansible.builtin.get_url:
+      url: https://releases.nixos.org/nix/nix-2.24.5/install
+      dest: /tmp/install_nix.sh
+      checksum: sha256:10aa09252316c35092ffe2f90093da463147b220543fabb88ec02bee9619d3bb
+    become_user: marco
+    when: nix_check is failed
+
+  - name: Install nix
+    ansible.builtin.command: sh /tmp/install_nix.sh --daemon --yes
+    become_user: marco
+    when: nix_check is failed
+
+  - name: Enable nix flakes
+    ansible.builtin.lineinfile:
+      path: /etc/nix/nix.conf
+      line: experimental-features = nix-command flakes
+
+  - name: Create home-manager config dir
+    file:
+      path: /home/marco/.config/home-manager
+      recurse: true
+      state: directory
+    become_user: marco
+
+  - name: Copy home-manager files
+    ansible.builtin.copy:
+      src: "{{ item.src }}" 
+      dest: "{{ item.dest }}"
+      force: true
+    become_user: marco
+    loop:
+      - src: home-manager/flake.nix
+        dest: /home/marco/.config/home-manager/flake.nix
+      - src: home-manager/home.nix
+        dest: /home/marco/.config/home-manager/home.nix
+
+  - name: Check if home-manager is installed
+    ansible.builtin.shell: home-manager --version
+    register: hm_check
+    ignore_errors: true
+    args:
+      executable: /bin/bash
+
+  - name: Add home-manager channel
+    ansible.builtin.shell: nix-channel --add https://github.com/nix-community/home-manager/archive/release-24.05.tar.gz home-manager
+    become_user: marco
+    args:
+      executable: /bin/bash
+    when: hm_check is failed
+
+  - name: Add nixpkgs channel
+    ansible.builtin.shell: nix-channel --add https://nixos.org/channels/nixos-24.05 nixpkgs
+    become_user: marco
+    args:
+      executable: /bin/bash
+    when: hm_check is failed
+
+  - name: Update nix packages
+    ansible.builtin.shell: nix-channel --update
+    become_user: marco
+    args:
+      executable: /bin/bash
+    when: hm_check is failed
+
+  - name: Install home-mananger
+    ansible.builtin.shell: nix-shell '<home-manager>' -A install
+    when: hm_check is failed
+    become_user: marco
+    args:
+      executable: /bin/bash
+
+  - block:
+    - name: Install home-manager packages
+      ansible.builtin.shell: home-manager switch
+      args:
+        executable: /bin/bash
+    become: true
+    become_user: marco
+
+
