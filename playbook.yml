@@ -7,6 +7,8 @@
   vars_files:
     - secrets.yml
   roles:
-    - role: utils
     - role: geerlingguy.docker
+    - role: utils
     - role: gantsign.minikube
+      minikube_version: 1.37.0
+    - role: minikube

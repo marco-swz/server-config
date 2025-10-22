@@ -1,0 +1,39 @@
+
+- name: Create wheel group
+  group:
+    name: wheel
+    state: present
+
+- name: Create marco user
+  ansible.builtin.user:
+    name: marco
+    password: "{{ secrets.marco_password }}"
+    shell: /bin/bash
+    groups: wheel
+    create_home: yes
+    
+- name: Add marco to the sudo group
+  ansible.builtin.user:
+    name: marco
+    groups: sudo
+    append: true
+
+- name: Add marco to the docker group
+  ansible.builtin.user:
+    name: marco
+    groups: docker
+    append: true
+
+- name: Add marco to sudoers file
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    line: 'marco ALL=(ALL:ALL) NOPASSWD:ALL'
+
+- name: Install utils packages
+  ansible.builtin.apt:
+    pkg:
+      - git
+      - neovim
+    state: latest
+    update_cache: true
+  become_user: marco

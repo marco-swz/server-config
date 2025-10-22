@@ -7,5 +7,6 @@
         ansible
         ansible-language-server
         bashInteractive
+        kubectl
     ];
 }
