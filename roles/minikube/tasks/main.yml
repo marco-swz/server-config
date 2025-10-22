@@ -5,8 +5,38 @@
   ignore_errors: true
   become_user: marco
 
-- name: Start Minikube if it's not running.
-  command: minikube start
-  become: yes
-  become_user: marco
-  when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+#- name: Start Minikube if it's not running.
+#  command: minikube start
+#  become: yes
+#  become_user: marco
+#  when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+
+- name: Ensure /etc/minikube dir exists
+  file: 
+    path: /etc/minikube
+    state: directory
+
+- name: Create kubectl proxy script
+  template: 
+    src: run_kubectl_proxy.sh.j2 
+    dest: /etc/minikube/run_kubectl_proxy.sh
+    mode: a+rx
+  notify:
+    - restart kubectl proxy service
+
+- name: Create service file
+  template: 
+    src: kubectl_proxy.service.j2 
+    dest: /etc/systemd/system/kubectl_proxy.service 
+    mode: a+r
+  notify:
+    - reload systemctl
+    - restart kubectl proxy service
+
+- meta: flush_handlers
+
+- name: Enable the kubectl proxy service
+  ansible.builtin.systemd_service:
+    name: kubectl_proxy.service
+    state: started
+    enabled: true

@@ -9,4 +9,8 @@
         bashInteractive
         kubectl
     ];
+
+    #scripts.kubectl.exec = ''
+    #  kubectl --kubeconfig kubeconfig.yml $@;
+    #'';
 }

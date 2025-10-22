@@ -1,0 +1,8 @@
+[Unit]
+Description=kubectl proxy
+
+[Service]
+ExecStart=/etc/minikube/run_kubectl_proxy.sh
+
+[Install]
+WantedBy=multi-user.target
