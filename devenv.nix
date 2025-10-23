@@ -2,6 +2,7 @@
 
 {
     env.GREET = "devenv";
+    env.KUBECONFIG = "kubeconfig.yml";
 
     packages = with pkgs; [
         ansible
@@ -9,8 +10,4 @@
         bashInteractive
         kubectl
     ];
-
-    #scripts.kubectl.exec = ''
-    #  kubectl --kubeconfig kubeconfig.yml $@;
-    #'';
 }
