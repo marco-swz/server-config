@@ -9,5 +9,6 @@
         ansible-language-server
         bashInteractive
         kubectl
+        kubernetes-helm
     ];
 }
